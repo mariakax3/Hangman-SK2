@@ -2,7 +2,7 @@ import socket
 import pygame
 import os
 import sys
-import threading
+import errno
 import time
 
 pygame.init()
@@ -27,7 +27,7 @@ pygame.mixer.music.set_volume(0.3)
 
 HOST = 'localhost'
 PORT = 8000
-leaderboard = ''
+# leaderboard = ''
 
 def setup_screen():
     pygame.display.set_caption('Wisielec')
@@ -128,35 +128,9 @@ def load_letters(let_ok, let_not_ok):
             c += 1
 
 
-def receive_top(s):
-    ranking_screen = pygame.Surface((323, 600))
-    ranking_screen.fill(white)
-    screen.blit(ranking_screen, (width, 0))
-    pygame.display.flip()
-
-    while True:
-        global leaderboard 
-        leaderboard = str(s.recv(256).decode()).strip()[:-1]
-        # print(leaderboard)
-        # players = leaderboard.split(";")
-        # print(players)
-        # y = 40
-        # for player in players:
-        #     print(player)
-        #     name, lives = player.split(":")
-        #     ranking_screen.blit(small_font.render(name + ': ' + lives, True, white), (width + 10, y))
-        #     y += 30
-        # pygame.display.flip()
-        # # pygame.time.wait(1000)
-        time.sleep(1)
-
-
 def run_game(s, category, clue):
-    x = threading.Thread(target=receive_top, args=(s,))
-    x.start()
+    s.setblocking(False)
 
-    global leaderboard
-    # newWidth = width + 400
     newWidth = 1123
     newHeight = 600
     screen = pygame.display.set_mode((newWidth, newHeight))
@@ -168,6 +142,7 @@ def run_game(s, category, clue):
     correct = True
     clue = clue.upper()
     clue = clue[:-1]
+    leaderboard = ''
 
     endFontD = pygame.font.SysFont('verdana', 38, bold=True)
     endFontC = pygame.font.SysFont('verdana', 25, bold=True)
@@ -201,7 +176,6 @@ def run_game(s, category, clue):
         if len(leaderboard) > 0:
             players = leaderboard.split(";")
             for player in players:
-                print(player)
                 name, lives = player.split(":")
                 screen.blit(small_font.render(name + ': ' + lives, True, white), (width + 10, y))
                 y += 30
@@ -238,6 +212,15 @@ def run_game(s, category, clue):
                     dude_path = os.path.join(base_path, 'sounds/ghf.wav')
                     no = pygame.mixer.Sound(dude_path)
                     no.play()
+                    try:
+                        leaderboard = str(s.recv(256).decode()).strip()[:-1]
+                    except socket.error as e:
+                        if e.args[0] == errno.EWOULDBLOCK: 
+                            print('EWOULDBLOCK')
+                            time.sleep(1)
+                        else:
+                            print(e)
+                            break
 
                 if '-' not in hidden:
                     winV = 1
@@ -285,7 +268,7 @@ def run_game(s, category, clue):
                     img = pygame.image.load(dude_path)
                     screen.blit(img, (0, height // 3 - 30))
                     hiddenT = font.render(''.join(hidden), True, white)
-                    youDied = endFontD.render('YOU DIED!', True, red)
+                    youDied = endFontD.render('GINIESZ!', True, red)
                     correctClueText = endFontC.render('Prawidłowe hasło:', True, white)
                     correctClue = endFontC.render(clue, True, white)
                     screen.blit(youDied, (3 * width // 4 - youDied.get_width() // 2, 180))
@@ -318,7 +301,6 @@ def play(s):
 
     data = str(s.recv(2).decode()).strip()
     print('message ', data)
-    print(len(data))
     if len(data) == 2:
         counter = 0
         category = int(data[0])
