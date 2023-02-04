@@ -27,7 +27,7 @@ pygame.mixer.music.set_volume(0.3)
 
 HOST = 'localhost'
 PORT = 8000
-# leaderboard = ''
+leaderboard = ''
 
 def setup_screen():
     pygame.display.set_caption('Wisielec')
@@ -129,6 +129,7 @@ def load_letters(let_ok, let_not_ok):
 
 
 def run_game(s, category, clue):
+    global leaderboard
     s.setblocking(False)
 
     newWidth = 1123
@@ -142,7 +143,7 @@ def run_game(s, category, clue):
     correct = True
     clue = clue.upper()
     clue = clue[:-1]
-    leaderboard = ''
+    in_game = True
 
     endFontD = pygame.font.SysFont('verdana', 38, bold=True)
     endFontC = pygame.font.SysFont('verdana', 25, bold=True)
@@ -166,26 +167,46 @@ def run_game(s, category, clue):
     screen.blit(hiddenT, (width // 2 - hiddenT.get_width() // 2, 60))
 
     while True:
-        y = 40
         screen.blit(small_font.render('Kategoria: ' + category, True, white), (10, 10))
         pygame.draw.line(screen, white, (width, 0), (width, newHeight))
         screen.blit(small_font.render('Tablica wyników:', True, white), (width + 10, 10))
         lives = small_font.render('Pozostałych żyć: ' + str(9 - fails), True, white)
         screen.blit(lives, (width // 2 - lives.get_width() // 2, height))
 
+        if (fails == 9):
+            s.setblocking(True)
+            try:
+                leaderboard = str(s.recv(256).decode()).strip()[:-1]
+            except socket.error as e:
+                if e.args[0] == errno.EWOULDBLOCK: 
+                    print('EWOULDBLOCK')
+                    time.sleep(1)
+                else:
+                    print(e)
+                    break
+
         if len(leaderboard) > 0:
+            y = 40
             players = leaderboard.split(";")
-            for player in players:
-                name, lives = player.split(":")
-                screen.blit(small_font.render(name + ': ' + lives, True, white), (width + 10, y))
-                y += 30
+            players = list(dict.fromkeys(players))
+            print('players len', len(players))
+            if (len(players) > 1):
+                for player in players:
+                    print(player)
+                    name, lives = player.split(":")
+                    screen.blit(small_font.render(name + ': ' + lives, True, white), (width + 10, y))
+                    y += 30
+            elif (len(players) == 1): #other player won the game
+                winner = endFontC.render('Wygrał gracz ' + players[0], True, white)
+                screen.blit(winner, (width // 2 - winner.get_width() // 2, height + 40))
+                in_game = False
         
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
 
-            if event.type == pygame.KEYDOWN:
+            if event.type == pygame.KEYDOWN and in_game == True:
 
                 correct = False
                 x = event.unicode
@@ -224,6 +245,7 @@ def run_game(s, category, clue):
 
                 if '-' not in hidden:
                     winV = 1
+                    s.sendall('w'.encode())
                     
                     screen.fill(black)
                     dude_path = os.path.join(base_path, 'images/s{}.jpg'.format(fails))
@@ -232,17 +254,10 @@ def run_game(s, category, clue):
                     clueT = font.render(clue, True, white)
                     screen.blit(clueT, (width // 2 - clueT.get_width() // 2, 60))
 
-                    win1 = endFontC.render('Tak jest, wygrywasz!', True, white)
-                    restart = endFontD.render('JESZCZE RAZ?', True, green)
+                    win1 = endFontD.render('Tak jest, wygrywasz!', True, white)
                     screen.blit(win1, (3 * width // 4 - win1.get_width() // 2, 180))
-                    screen.blit(restart, (3 * width // 4 - restart.get_width() // 2, 300))
                     pygame.display.flip()
                     
-                    yesT = endFontC.render('TAK', True, white)
-                    noT = endFontC.render('NIE', True, white)
-                    screen.blit(yesT, (3 * width // 4 - restart.get_width() // 4, 370))
-                    screen.blit(noT, (3 * width // 4 + restart.get_width() // 4 - noT.get_width() // 2, 370))
-
                     dude_path = os.path.join(base_path, 'sounds/win.ogg')
                     win = pygame.mixer.Sound(dude_path)
                     pygame.mixer.music.stop()
@@ -280,28 +295,30 @@ def run_game(s, category, clue):
                     pygame.draw.line(screen, white, (width, 0), (width, newHeight))
                     screen.blit(small_font.render('Tablica wyników:', True, white), (width + 10, 10))
 
+                    in_game = False
                     pygame.display.flip()
                     pygame.mixer.music.stop()
                     gameOverSound.play()
                     pygame.time.wait(5000)
                     pygame.mixer.music.play(-1)
-                    return True
                 
-        if not winV:
+        if not winV and in_game == True:
             load_letters(let_ok, let)
 
         pygame.display.flip()
 
 
 def play(s):
+    global leaderboard
     screen.fill(black)
     waiting = font.render('Czekam na użytkowników...', True, white)
     screen.blit(waiting, (width // 2 - waiting.get_width() // 2, height // 2 - waiting.get_height() // 2))
     pygame.display.flip()
 
     data = str(s.recv(2).decode()).strip()
+    leaderboard = str(s.recv(256).decode()).strip()[:-1]
     print('message ', data)
-    if len(data) == 2:
+    if len(data) == 2 and ord(data[0]) >= 48 and ord(data[0]) <= 51 and ord(data[1]) >= 97 and ord(data[1]) <= 122:
         counter = 0
         category = int(data[0])
         clue = ord(data[1]) - 97

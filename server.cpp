@@ -16,7 +16,6 @@ using namespace std;
 
 struct Player{
     string username;
-    // int lives;
     string lives;
     int socket;
 };
@@ -79,15 +78,32 @@ void* handle_client(void* socket) {
         while (players.size() < 2);
 
         write(client_socket, char_array, 2);
+        send_top(client_socket);
         cout << char_array << endl;
     } else {
         write(client_socket, char_array, 2);
+        send_top(client_socket);
         cout << char_array << endl;
     }
 
-    for(int i = 0; i < 9; i++) {
-        // int l = stoi(receive(client_socket));
+    for(int i = 0; i < 10; i++) {
         string l = receive(client_socket);
+        if (l == "w") { //win
+            string winner;
+            for(auto & player : players) {
+                if (player.socket == client_socket) {
+                    winner = player.username;
+                    winner = winner.append(";");
+                    break;
+                }
+            }
+            for(auto & player : players) { //send winner username to other players
+                if (player.socket != client_socket) {
+                    write(player.socket, winner.c_str(), winner.length());
+                }
+            }
+            cout << "player " << client_socket << " won" << endl;
+        }
         for(auto & player : players) {
             if (player.socket == client_socket) {
                 player.lives = l;
@@ -97,6 +113,8 @@ void* handle_client(void* socket) {
         sort(players.begin(), players.end(), compare_by_lives);
         send_top(client_socket);
     }
+
+    cout << "end of the game" << endl;
 
     close(client_socket);
 
