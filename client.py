@@ -171,7 +171,8 @@ def run_game(s, category, clue):
         pygame.draw.line(screen, white, (width, 0), (width, newHeight))
         screen.blit(small_font.render('Tablica wyników:', True, white), (width + 10, 10))
         lives = small_font.render('Pozostałych żyć: ' + str(9 - fails), True, white)
-        screen.blit(lives, (width // 2 - lives.get_width() // 2, height))
+        if (fails < 9):
+            screen.blit(lives, (width // 2 - lives.get_width() // 2, height))
 
         if (fails == 9):
             s.setblocking(True)
@@ -189,17 +190,16 @@ def run_game(s, category, clue):
             y = 40
             players = leaderboard.split(";")
             players = list(dict.fromkeys(players))
-            print('players len', len(players))
             if (len(players) > 1):
                 for player in players:
-                    print(player)
                     name, lives = player.split(":")
                     screen.blit(small_font.render(name + ': ' + lives, True, white), (width + 10, y))
                     y += 30
-            elif (len(players) == 1): #other player won the game
-                winner = endFontC.render('Wygrał gracz ' + players[0], True, white)
+            elif(len(players) == 1):
+                winner = endFontC.render('Wygrał gracz ' + name, True, red)
                 screen.blit(winner, (width // 2 - winner.get_width() // 2, height + 40))
                 in_game = False
+
         
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -254,7 +254,7 @@ def run_game(s, category, clue):
                     clueT = font.render(clue, True, white)
                     screen.blit(clueT, (width // 2 - clueT.get_width() // 2, 60))
 
-                    win1 = endFontD.render('Tak jest, wygrywasz!', True, white)
+                    win1 = endFontD.render('Tak jest, wygrywasz!', True, lime)
                     screen.blit(win1, (3 * width // 4 - win1.get_width() // 2, 180))
                     pygame.display.flip()
                     

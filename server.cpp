@@ -10,6 +10,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <threads.h>
+#include <signal.h>
 
 #define MAX_CLIENTS 64
 using namespace std;
@@ -25,6 +26,7 @@ int category = -1;
 char clue = '0';
 string tosend;
 char* char_array;
+int server_fd;
 
 string receive(int client) {
     char data[64]={0};
@@ -88,21 +90,19 @@ void* handle_client(void* socket) {
 
     for(int i = 0; i < 10; i++) {
         string l = receive(client_socket);
-        if (l == "w") { //win
-            string winner;
+        if (l == "w") {
+            string username = "";
             for(auto & player : players) {
                 if (player.socket == client_socket) {
-                    winner = player.username;
-                    winner = winner.append(";");
+                    username = player.username;
                     break;
                 }
             }
-            for(auto & player : players) { //send winner username to other players
+            for(auto & player : players) {
                 if (player.socket != client_socket) {
-                    write(player.socket, winner.c_str(), winner.length());
+                    write(client_socket, username.c_str(), username.length());
                 }
             }
-            cout << "player " << client_socket << " won" << endl;
         }
         for(auto & player : players) {
             if (player.socket == client_socket) {
@@ -121,10 +121,21 @@ void* handle_client(void* socket) {
     return nullptr;
 }
 
+void ctrl_c(int){
+    for(auto & player : players){
+        shutdown(player.socket, SHUT_RDWR);
+        close(player.socket);
+    }
+    close(server_fd);
+    printf("Closing server\n");
+    exit(0);
+}
+
 int main() {
     int server_socket, client_socket;
     struct sockaddr_in server_address, client_address;
     socklen_t client_len;
+    signal(SIGINT, ctrl_c);
 
     get_clue();
     tosend = to_string(category) + clue;
@@ -134,11 +145,17 @@ int main() {
     strcpy(char_array, tosend.c_str());
 
     server_socket = socket(AF_INET, SOCK_STREAM, 0);
+    server_fd = server_socket;
 
     server_address.sin_family = AF_INET;
     server_address.sin_port = htons(8000);
     server_address.sin_addr.s_addr = inet_addr("127.0.0.1");
     // server_address.sin_addr.s_addr = htonl(INADDR_ANY);
+
+    const int enable = 1;
+    if (setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0) {
+        perror("Error: Failed to setsockopt(SO_REUSEADDR)");
+    }
 
     if(bind(server_socket, (struct sockaddr *) &server_address, sizeof(server_address)) < 0) {
         perror("Error: Failed to bind server socket");

@@ -1,25 +1,26 @@
-siła elektromotoryczna
+sila elektromotoryczna
 wektor indukcji magnetycznej
-zasada zachowania momentu pędu
+zasada zachowania momentu pedu
 spadek swobodny
 adiabata
-rozszerzalność cieplna
-bryła sztywna
-całkowite wewnętrzne odbicie
-druga prędkość kosmiczna
+rozszerzalnosc cieplna
+bryla sztywna
+calkowite wewnetrzne odbicie
+druga predkosc kosmiczna
 fotoemisja elektronowa
-moment bezwładności
+moment bezwladności
 paradoks hydrostatyczny
-prawo powszechnego ciążenia
+prawo powszechnego ciazenia
 powierzchnia ekwipotencjalna
-rzut ukośny
+rzut ukosny
 rzut pionowy
 rzut poziomy
-stała Avogadra
-sprawność silnika cieplnego
-środek masy
+stala Avogadra
+sprawnosc silnika cieplnego
+srodek masy
 tablica Mendelejewa
-uniwersalna stała gazowa
-równanie Clapeyrona
+uniwersalna stala gazowa
+rownanie Clapeyrona
 zmiana stanu skupienia
 zorza polarna
+optyka
