@@ -13,28 +13,31 @@
 #include <signal.h>
 
 #define MAX_CLIENTS 64
-using namespace std;
+#define min(a,b)            (((a) < (b)) ? (a) : (b))
+#define max(a,b)            (((a) > (b)) ? (a) : (b))
+// using namespace std;
 
 struct Player{
-    string username;
-    string lives;
+    std::string username;
+    std::string lives;
     int socket;
 };
-vector<Player> players;
+std::vector<Player> players;
 
 int category = -1;
 char clue = '0';
-string tosend;
+std::string tosend;
 char* char_array;
 int server_fd;
+bool in_game = true;
 
-string receive(int client) {
+std::string receive(int client) {
     char data[64]={0};
     recv(client, data , sizeof(data) , 0);
-    return string(data);
+    return std::string(data);
 }
 
-int check_username(string name) {
+int check_username(std::string name) {
     for(Player player : players) {
         if (player.username == name) {
             return -1;
@@ -43,10 +46,10 @@ int check_username(string name) {
     return 0;
 }
 
-Player create_player(string name, int sockfd) {
+Player create_player(std::string name, int sockfd) {
     Player p;
     p.username = name;
-    p.lives = '9';
+    p.lives = "9";
     p.socket = sockfd;
     return p;
 }
@@ -54,17 +57,21 @@ Player create_player(string name, int sockfd) {
 void get_clue() {
     srand(time(NULL));
 
-    string file_name;
+    std::string file_name;
     category = rand()%4;
     clue = 'a' + rand()%26;
 }
 
 void send_top(int sockfd) {
-    string top = "";
+    std::string top = "";
     for(int i = 0; i < min(8, static_cast<int>(players.size())); i++) {
-        top.append(players[i].username).append(":").append(players[i].lives).append(";");
+        top.append(players[i].username).append(":").append(players[i].lives);
+        if (i < min(8, static_cast<int>(players.size())) - 1) {
+            top.append(";");
+        }
     }
-    cout << top << endl;
+    top.append("\r\n");
+    std::cout << top;
     write(sockfd, top.c_str(), top.length());
 }
 
@@ -81,40 +88,34 @@ void* handle_client(void* socket) {
 
         write(client_socket, char_array, 2);
         send_top(client_socket);
-        cout << char_array << endl;
+        std::cout << char_array << std::endl;
     } else {
         write(client_socket, char_array, 2);
         send_top(client_socket);
-        cout << char_array << endl;
+        std::cout << char_array << std::endl;
     }
 
-    for(int i = 0; i < 10; i++) {
-        string l = receive(client_socket);
-        if (l == "w") {
-            string username = "";
+    while (in_game) {
+        char l[1];
+        // std::string l = receive(client_socket);
+        int ret = recv(client_socket, l, 1, MSG_DONTWAIT);
+        if (ret > 0) { 
+            if (std::to_string(l[0]) == "w") {
+                in_game = false;
+            }
             for(auto & player : players) {
                 if (player.socket == client_socket) {
-                    username = player.username;
+                    player.lives = std::to_string(l[0]);
                     break;
                 }
-            }
-            for(auto & player : players) {
-                if (player.socket != client_socket) {
-                    write(client_socket, username.c_str(), username.length());
-                }
-            }
-        }
-        for(auto & player : players) {
-            if (player.socket == client_socket) {
-                player.lives = l;
-                break;
             }
         }
         sort(players.begin(), players.end(), compare_by_lives);
         send_top(client_socket);
+        sleep(1);
     }
 
-    cout << "end of the game" << endl;
+    std::cout << "end of the game" << std::endl;
 
     close(client_socket);
 
@@ -138,7 +139,7 @@ int main() {
     signal(SIGINT, ctrl_c);
 
     get_clue();
-    tosend = to_string(category) + clue;
+    tosend = std::to_string(category) + clue;
 
     const int length = tosend.length();
     char_array = new char[length + 1];
@@ -149,8 +150,8 @@ int main() {
 
     server_address.sin_family = AF_INET;
     server_address.sin_port = htons(8000);
-    server_address.sin_addr.s_addr = inet_addr("127.0.0.1");
-    // server_address.sin_addr.s_addr = htonl(INADDR_ANY);
+    // server_address.sin_addr.s_addr = inet_addr("127.0.0.1");
+    server_address.sin_addr.s_addr = htonl(INADDR_ANY);
 
     const int enable = 1;
     if (setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0) {
@@ -163,7 +164,7 @@ int main() {
     }
 
     listen(server_socket, MAX_CLIENTS);
-    cout << "Server Listening...\n";
+    std::cout << "Server Listening...\n";
 
     pthread_t thread;
     int status;
@@ -175,14 +176,14 @@ int main() {
             perror("Error: Client failed to connect");
             return 1;
         }
-        cout << "Connection accepted\n";
+        std::cout << "Connection accepted\n";
 
-        string newName = receive(client_socket);
+        std::string newName = receive(client_socket);
         if (check_username(newName) == -1) {
-            string message = "taken";
+            std::string message = "taken";
             write(client_socket, message.c_str(), message.length());
         } else {
-            string message = "available";
+            std::string message = "available";
             write(client_socket, message.c_str(), message.length());
         }
 

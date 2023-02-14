@@ -4,6 +4,7 @@ import os
 import sys
 import errno
 import time
+import threading
 
 pygame.init()
 
@@ -128,9 +129,32 @@ def load_letters(let_ok, let_not_ok):
             c += 1
 
 
+def get_leaderboard(s):
+    global leaderboard
+    s.setblocking(True)
+    while True:
+        res = b''
+        while b'\r\n' not in res:
+            data = s.recv(256)
+            # try:
+                # data = s.recv(256)
+            # except socket.error as e:
+                # if e.args[0] == errno.EWOULDBLOCK: 
+                #     print('EWOULDBLOCK')
+                #     time.sleep(1)
+                # else:
+                #     print(e)
+                #     break
+            res += data
+        line, sep, res = res.partition(b'\r\n')
+        leaderboard = line.decode()
+        time.sleep(1)
+
+
 def run_game(s, category, clue):
     global leaderboard
-    s.setblocking(False)
+    x = threading.Thread(target=get_leaderboard, args=(s,))
+    x.start()
 
     newWidth = 1123
     newHeight = 600
@@ -174,32 +198,22 @@ def run_game(s, category, clue):
         if (fails < 9):
             screen.blit(lives, (width // 2 - lives.get_width() // 2, height))
 
-        if (fails == 9):
-            s.setblocking(True)
-            try:
-                leaderboard = str(s.recv(256).decode()).strip()[:-1]
-            except socket.error as e:
-                if e.args[0] == errno.EWOULDBLOCK: 
-                    print('EWOULDBLOCK')
-                    time.sleep(1)
-                else:
-                    print(e)
-                    break
-
         if len(leaderboard) > 0:
             y = 40
             players = leaderboard.split(";")
             players = list(dict.fromkeys(players))
-            if (len(players) > 1):
-                for player in players:
-                    name, lives = player.split(":")
-                    screen.blit(small_font.render(name + ': ' + lives, True, white), (width + 10, y))
-                    y += 30
-            elif(len(players) == 1):
-                winner = endFontC.render('Wygrał gracz ' + name, True, red)
-                screen.blit(winner, (width // 2 - winner.get_width() // 2, height + 40))
-                in_game = False
-
+            for player in players:
+                if len(player) > 0 and player[len(player)-1] != ':' and player.count(':') == 1:
+                    name, lives = player.split(':')
+                    if lives == 'w':
+                        winner = endFontC.render('Wygrał gracz ' + name, True, red)
+                        screen.blit(winner, (width // 2 - winner.get_width() // 2, height + 40))
+                        in_game = False
+                    else:
+                        if int(lives) > 9:
+                            lives = str(int(lives) - 48)
+                        screen.blit(small_font.render(name + ': ' + lives, True, white), (width + 10, y))
+                        y += 30
         
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -233,15 +247,6 @@ def run_game(s, category, clue):
                     dude_path = os.path.join(base_path, 'sounds/ghf.wav')
                     no = pygame.mixer.Sound(dude_path)
                     no.play()
-                    try:
-                        leaderboard = str(s.recv(256).decode()).strip()[:-1]
-                    except socket.error as e:
-                        if e.args[0] == errno.EWOULDBLOCK: 
-                            print('EWOULDBLOCK')
-                            time.sleep(1)
-                        else:
-                            print(e)
-                            break
 
                 if '-' not in hidden:
                     winV = 1
@@ -347,6 +352,7 @@ def play(s):
                 else:
                     counter += 1
 
+        print(clue_txt)
         run_game(s, category_txt, clue_txt)
     else:
         print('else')
