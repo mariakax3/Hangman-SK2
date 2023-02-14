@@ -136,15 +136,6 @@ def get_leaderboard(s):
         res = b''
         while b'\r\n' not in res:
             data = s.recv(256)
-            # try:
-                # data = s.recv(256)
-            # except socket.error as e:
-                # if e.args[0] == errno.EWOULDBLOCK: 
-                #     print('EWOULDBLOCK')
-                #     time.sleep(1)
-                # else:
-                #     print(e)
-                #     break
             res += data
         line, sep, res = res.partition(b'\r\n')
         leaderboard = line.decode()

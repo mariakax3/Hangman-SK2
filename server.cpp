@@ -15,7 +15,6 @@
 #define MAX_CLIENTS 64
 #define min(a,b)            (((a) < (b)) ? (a) : (b))
 #define max(a,b)            (((a) > (b)) ? (a) : (b))
-// using namespace std;
 
 struct Player{
     std::string username;
@@ -97,7 +96,6 @@ void* handle_client(void* socket) {
 
     while (in_game) {
         char l[1];
-        // std::string l = receive(client_socket);
         int ret = recv(client_socket, l, 1, MSG_DONTWAIT);
         if (ret > 0) { 
             if (std::to_string(l[0]) == "w") {
