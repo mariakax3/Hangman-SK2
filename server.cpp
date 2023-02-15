@@ -97,7 +97,7 @@ void* handle_client(void* socket) {
     while (in_game) {
         char l[1];
         int ret = recv(client_socket, l, 1, MSG_DONTWAIT);
-        if (ret > 0) { 
+        if (ret == 1) { 
             if (std::to_string(l[0]) == "w") {
                 in_game = false;
             }
@@ -148,7 +148,6 @@ int main() {
 
     server_address.sin_family = AF_INET;
     server_address.sin_port = htons(8000);
-    // server_address.sin_addr.s_addr = inet_addr("127.0.0.1");
     server_address.sin_addr.s_addr = htonl(INADDR_ANY);
 
     const int enable = 1;

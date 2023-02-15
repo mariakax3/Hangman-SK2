@@ -2,7 +2,6 @@ import socket
 import pygame
 import os
 import sys
-import errno
 import time
 import threading
 
@@ -182,6 +181,7 @@ def run_game(s, category, clue):
     screen.blit(hiddenT, (width // 2 - hiddenT.get_width() // 2, 60))
 
     while True:
+        pygame.draw.rect(screen, black, pygame.Rect(width, 0, newWidth-width, newHeight))
         screen.blit(small_font.render('Kategoria: ' + category, True, white), (10, 10))
         pygame.draw.line(screen, white, (width, 0), (width, newHeight))
         screen.blit(small_font.render('Tablica wyników:', True, white), (width + 10, 10))
@@ -196,13 +196,15 @@ def run_game(s, category, clue):
             for player in players:
                 if len(player) > 0 and player[len(player)-1] != ':' and player.count(':') == 1:
                     name, lives = player.split(':')
-                    if lives == 'w':
+                    if int(lives) == 119:
                         winner = endFontC.render('Wygrał gracz ' + name, True, red)
                         screen.blit(winner, (width // 2 - winner.get_width() // 2, height + 40))
                         in_game = False
                     else:
-                        if int(lives) > 9:
+                        if int(lives) > 9 and int(lives) != 119:
                             lives = str(int(lives) - 48)
+                        elif int(lives) == 119:
+                            lives = 'wygrana'
                         screen.blit(small_font.render(name + ': ' + lives, True, white), (width + 10, y))
                         y += 30
         
